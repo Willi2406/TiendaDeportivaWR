@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TiendaDeportiva.Models;
+namespace TiendaDeportivaWR.Models;
 
 public class EntradaDetalle
 {
@@ -16,7 +16,6 @@ public class EntradaDetalle
     [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0")]
     public int Cantidad { get; set; }
 
-    // Aquí usamos Costo porque representa el valor de adquisición
     [Range(0.01, double.MaxValue, ErrorMessage = "El costo debe ser mayor a 0")]
     public decimal Costo { get; set; }
 }

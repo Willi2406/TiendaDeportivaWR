@@ -1,0 +1,167 @@
+﻿@page "/Entrada/Index"
+@using TiendaDeportivaWR.Models
+@using TiendaDeportivaWR.Services
+@inject EntradaServices entradaServices
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Gestión de Entradas</PageTitle>
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header space-between">
+            <h5 class="card-title">Gestión de Entradas (Inventario)</h5>
+            <a href="/Entrada/Create" class="btn btn-primary">
+                <span class="bi bi-plus-square mt-3"></span> Crear Entrada
+            </a>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                @* Filtro de Fechas *@
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Desde</strong></label>
+                    <InputDate @bind-Value="FechaDesde" class="form-control" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Hasta</strong></label>
+                    <InputDate @bind-Value="FechaHasta" class="form-control" />
+                </div>
+
+                @* Seleccion de Filtro *@
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Filtrar por</strong></label>
+                    <InputSelect class="form-select" @bind-Value="Filtro">
+                        <option value="" selected disabled>Elegir una opción</option>
+                        <option value="EntradaId">Id</option>
+                        <option value="Concepto">Concepto</option>
+                        <option value="Total">Total</option>
+                    </InputSelect>
+                </div>
+
+                @* Input de Busqueda y Botones *@
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Búsqueda</strong></label>
+                    <div class="input-group">
+                        <input class="form-control" @bind="ValorFiltro" placeholder="Buscar..." />
+                        <button type="button" class="btn btn-outline-primary bi bi-search" @onclick="Buscar"></button>
+                        <button type="button" class="btn btn-outline-secondary bi bi-arrow-counterclockwise" @onclick="Limpiar"></button>
+                    </div>
+                </div>
+            </div>
+
+            @* Tabla de Resultados *@
+            <div class="table-responsive mt-3">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-striped table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>ID</th>
+                            <th>Concepto</th>
+                            <th>Artículos (Cant.)</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Opciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in ListaEntradas)
+                        {
+                            <tr>
+                                <td>@e.Fecha.ToShortDateString()</td>
+                                <td>@e.EntradaId</td>
+                                <td>@e.Concepto</td>
+                                @* Sumamos la cantidad de productos en este detalle *@
+                                <td>@e.Detalle.Sum(d => d.Cantidad)</td>
+                                <td class="text-end">@e.Total.ToString("C")</td>
+                                <td class="text-center">
+                                    <a href="/Entrada/Edit/@e.EntradaId" class="btn btn-outline-primary bi bi-pencil-square" title="Editar"></a>
+                                    <a href="/Entrada/Delete/@e.EntradaId" class="btn btn-outline-danger bi bi-trash" title="Eliminar"></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* Pie de Pagina con Totales *@
+        <div class="card-footer d-flex justify-content-between">
+            <span><strong>Cantidad Total de Artículos:</strong> @ListaEntradas.Sum(e => e.Detalle.Sum(d => d.Cantidad))</span>
+            <span><strong>Monto Total Inventario:</strong> @ListaEntradas.Sum(e => e.Total).ToString("C")</span>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    public List<Entrada> ListaEntradas { get; set; } = new List<Entrada>();
+    public string Filtro { get; set; } = string.Empty;
+    public string ValorFiltro { get; set; } = string.Empty;
+    public DateTime? FechaDesde { get; set; }
+    public DateTime? FechaHasta { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
+    }
+
+    private async Task Buscar()
+    {
+        if (string.IsNullOrWhiteSpace(Filtro) && !FechaDesde.HasValue && !FechaHasta.HasValue)
+        {
+            ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
+            return;
+        }
+        if (FechaDesde.HasValue || FechaHasta.HasValue)
+        {
+            var datos = await entradaServices.Listar(e => e.EntradaId > 0);
+
+            if (FechaDesde.HasValue && FechaHasta.HasValue)
+            {
+                ListaEntradas = datos
+                    .Where(e => e.Fecha.Date >= FechaDesde.Value.Date && e.Fecha.Date <= FechaHasta.Value.Date)
+                    .ToList();
+            }
+            else if (FechaDesde.HasValue)
+            {
+                ListaEntradas = datos
+                    .Where(e => e.Fecha.Date >= FechaDesde.Value.Date)
+                    .ToList();
+            }
+            else if (FechaHasta.HasValue)
+            {
+                ListaEntradas = datos
+                    .Where(e => e.Fecha.Date <= FechaHasta.Value.Date)
+                    .ToList();
+            }
+            return;
+        }
+        if (Filtro == "Concepto" && !string.IsNullOrWhiteSpace(ValorFiltro))
+        {
+            var v = ValorFiltro.Trim().ToLower();
+            ListaEntradas = await entradaServices.Listar(e => e.Concepto.ToLower().Contains(v));
+        }
+        else if (Filtro == "EntradaId" && int.TryParse(ValorFiltro, out var id))
+        {
+            ListaEntradas = await entradaServices.Listar(e => e.EntradaId == id);
+        }
+        else if (Filtro == "Total" && decimal.TryParse(ValorFiltro, out var total))
+        {
+            ListaEntradas = await entradaServices.Listar(e => e.Total == total);
+        }
+        else
+        {
+            ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
+        }
+    }
+
+    private async Task Limpiar()
+    {
+        Filtro = string.Empty;
+        ValorFiltro = string.Empty;
+        FechaDesde = null;
+        FechaHasta = null;
+        ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
+    }
+}

@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using TiendaDeportivaWR.Models;
 
-namespace TiendaDeportiva.Models;
+namespace TiendaDeportivaWR.Models;
 
 public class Entrada
 {

@@ -31,11 +31,10 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var contextFactory = services.GetRequiredService<IDbContextFactory<Contexto>>();
     using var context = contextFactory.CreateDbContext();
-    context.Database.EnsureCreated(); // Crea la BD y las tablas si no existen
+    context.Database.EnsureCreated();
 }
 
 
-// Configuración del pipeline HTTP.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
