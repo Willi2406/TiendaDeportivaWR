@@ -17,19 +17,16 @@
         </div>
 
         <div class="card-body">
+            @* --- Filtros (Igual que antes) --- *@
             <div class="row g-3 align-items-end">
-                @* Filtro de Fechas *@
                 <div class="col-md-3">
                     <label class="form-label"><strong>Desde</strong></label>
                     <InputDate @bind-Value="FechaDesde" class="form-control" />
                 </div>
-
                 <div class="col-md-3">
                     <label class="form-label"><strong>Hasta</strong></label>
                     <InputDate @bind-Value="FechaHasta" class="form-control" />
                 </div>
-
-                @* Seleccion de Filtro *@
                 <div class="col-md-3">
                     <label class="form-label"><strong>Filtrar por</strong></label>
                     <InputSelect class="form-select" @bind-Value="Filtro">
@@ -39,8 +36,6 @@
                         <option value="Total">Total</option>
                     </InputSelect>
                 </div>
-
-                @* Input de Busqueda y Botones *@
                 <div class="col-md-3">
                     <label class="form-label"><strong>Búsqueda</strong></label>
                     <div class="input-group">
@@ -51,28 +46,29 @@
                 </div>
             </div>
 
-            @* Tabla de Resultados *@
+            @* --- Tabla de Resultados --- *@
             <div class="table-responsive mt-3">
                 <table class="table table-hover table-bordered">
-                    <thead class="table-striped table-dark">
+                    @* CAMBIO: Quitamos 'table-dark' y ponemos 'table-light' *@
+                    <thead class="table-light text-center">
                         <tr>
                             <th>Fecha</th>
                             <th>ID</th>
                             <th>Concepto</th>
-                            <th>Artículos (Cant.)</th>
-                            <th class="text-end">Total</th>
-                            <th class="text-center">Opciones</th>
+                            <th>Artículos</th>
+                            <th>Total</th>
+                            @* CAMBIO: Aseguramos que el título también esté centrado *@
+                            <th>Opciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var e in ListaEntradas)
                         {
                             <tr>
-                                <td>@e.Fecha.ToShortDateString()</td>
-                                <td>@e.EntradaId</td>
+                                <td class="text-center">@e.Fecha.ToShortDateString()</td>
+                                <td class="text-center">@e.EntradaId</td>
                                 <td>@e.Concepto</td>
-                                @* Sumamos la cantidad de productos en este detalle *@
-                                <td>@e.Detalle.Sum(d => d.Cantidad)</td>
+                                <td class="text-center">@e.Detalle.Sum(d => d.Cantidad)</td>
                                 <td class="text-end">@e.Total.ToString("C")</td>
                                 <td class="text-center">
                                     <a href="/Entrada/Edit/@e.EntradaId" class="btn btn-outline-primary bi bi-pencil-square" title="Editar"></a>
@@ -85,7 +81,6 @@
             </div>
         </div>
 
-        @* Pie de Pagina con Totales *@
         <div class="card-footer d-flex justify-content-between">
             <span><strong>Cantidad Total de Artículos:</strong> @ListaEntradas.Sum(e => e.Detalle.Sum(d => d.Cantidad))</span>
             <span><strong>Monto Total Inventario:</strong> @ListaEntradas.Sum(e => e.Total).ToString("C")</span>
@@ -113,34 +108,21 @@
             ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
             return;
         }
+
+        var datos = await entradaServices.Listar(e => e.EntradaId > 0);
+
         if (FechaDesde.HasValue || FechaHasta.HasValue)
         {
-            var datos = await entradaServices.Listar(e => e.EntradaId > 0);
-
             if (FechaDesde.HasValue && FechaHasta.HasValue)
-            {
-                ListaEntradas = datos
-                    .Where(e => e.Fecha.Date >= FechaDesde.Value.Date && e.Fecha.Date <= FechaHasta.Value.Date)
-                    .ToList();
-            }
+                ListaEntradas = datos.Where(e => e.Fecha.Date >= FechaDesde.Value.Date && e.Fecha.Date <= FechaHasta.Value.Date).ToList();
             else if (FechaDesde.HasValue)
-            {
-                ListaEntradas = datos
-                    .Where(e => e.Fecha.Date >= FechaDesde.Value.Date)
-                    .ToList();
-            }
+                ListaEntradas = datos.Where(e => e.Fecha.Date >= FechaDesde.Value.Date).ToList();
             else if (FechaHasta.HasValue)
-            {
-                ListaEntradas = datos
-                    .Where(e => e.Fecha.Date <= FechaHasta.Value.Date)
-                    .ToList();
-            }
-            return;
+                ListaEntradas = datos.Where(e => e.Fecha.Date <= FechaHasta.Value.Date).ToList();
         }
-        if (Filtro == "Concepto" && !string.IsNullOrWhiteSpace(ValorFiltro))
+        else if (Filtro == "Concepto" && !string.IsNullOrWhiteSpace(ValorFiltro))
         {
-            var v = ValorFiltro.Trim().ToLower();
-            ListaEntradas = await entradaServices.Listar(e => e.Concepto.ToLower().Contains(v));
+            ListaEntradas = await entradaServices.Listar(e => e.Concepto.ToLower().Contains(ValorFiltro.Trim().ToLower()));
         }
         else if (Filtro == "EntradaId" && int.TryParse(ValorFiltro, out var id))
         {
@@ -152,7 +134,7 @@
         }
         else
         {
-            ListaEntradas = await entradaServices.Listar(e => e.EntradaId > 0);
+            ListaEntradas = datos;
         }
     }
 
