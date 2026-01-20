@@ -14,7 +14,7 @@ builder.Services.AddRazorComponents()
 var connectionString = builder.Configuration.GetConnectionString("ConStr");
 
 builder.Services.AddDbContextFactory<Contexto>(options =>
-    options.UseSqlite(connectionString));
+    options.UseSqlServer(connectionString));
 
 
 builder.Services.AddIdentityCore<IdentityUser>()
@@ -22,6 +22,7 @@ builder.Services.AddIdentityCore<IdentityUser>()
 
 
 builder.Services.AddScoped<EntradaServices>();
+builder.Services.AddScoped<ProductoServices>();
 
 var app = builder.Build();
 

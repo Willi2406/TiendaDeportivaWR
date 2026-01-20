@@ -1,0 +1,119 @@
+﻿@page "/Producto/Index"
+@using TiendaDeportivaWR.Models
+@using TiendaDeportivaWR.Services
+@inject ProductoServices productoServices
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>Catálogo de Productos</PageTitle>
+
+<div class="container">
+    <div class="card shadow-lg">
+        <div class="card-header space-between">
+            <h5 class="card-title">Catálogo de Productos</h5>
+            <a href="/Producto/Form" class="btn btn-primary">
+                <span class="bi bi-plus-square mt-3"></span> Crear Producto
+            </a>
+        </div>
+
+        <div class="card-body">
+            @* Filtro de Búsqueda *@
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Filtrar por:</label>
+                    <select @bind="Filtro" class="form-select">
+                        <option value="descripcion">Descripción</option>
+                        <option value="id">ID</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Criterio:</label>
+                    <div class="input-group">
+                        <input @bind="Criterio" class="form-control" placeholder="Buscar..." />
+                        <button @onclick="Buscar" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>ID</th>
+                            <th>Descripción</th>
+                            <th>Costo Ref.</th>
+                            <th>Precio Venta</th>
+                            <th>Existencia</th>
+                            <th>Opciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in ListaProductos)
+                        {
+                            <tr>
+                                <td class="text-center">@item.ProductoId</td>
+                                <td>@item.Descripcion</td>
+                                <td class="text-end">@item.Costo.ToString("C")</td>
+                                <td class="text-end">@item.Precio.ToString("C")</td>
+                                
+                                @* Color condicional para el stock *@
+                                <td class="text-center @(item.Existencia == 0 ? "text-danger fw-bold" : "")">
+                                    @item.Existencia
+                                </td>
+                                
+                                <td class="text-center">
+                                    <a href="/Producto/Edit/@item.ProductoId" class="btn btn-outline-primary bi bi-pencil-square"></a>
+                                    <button type="button" class="btn btn-outline-danger bi bi-trash" @onclick="() => Eliminar(item.ProductoId)"></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            Total de Productos: @ListaProductos.Count
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<Producto> ListaProductos { get; set; } = new List<Producto>();
+    public string Filtro { get; set; } = "descripcion";
+    public string Criterio { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListaProductos = await productoServices.Listar(p => true);
+    }
+
+    public async Task Buscar()
+    {
+        if (string.IsNullOrWhiteSpace(Criterio))
+        {
+            ListaProductos = await productoServices.Listar(p => true);
+        }
+        else
+        {
+            if (Filtro == "id" && int.TryParse(Criterio, out int id))
+                ListaProductos = await productoServices.Listar(p => p.ProductoId == id);
+            else
+                ListaProductos = await productoServices.Listar(p => p.Descripcion.ToLower().Contains(Criterio.ToLower()));
+        }
+    }
+
+    public async Task Eliminar(int id)
+    {
+        var conf = await JSRuntime.InvokeAsync<bool>("confirm", "¿Eliminar este producto?");
+        if (conf)
+        {
+            var exito = await productoServices.Eliminar(id);
+            if (exito)
+                await Buscar(); // Refrescar lista
+            else
+                await JSRuntime.InvokeVoidAsync("alert", "No se puede eliminar. Es probable que este producto se use en una Entrada/Venta.");
+        }
+    }
+}

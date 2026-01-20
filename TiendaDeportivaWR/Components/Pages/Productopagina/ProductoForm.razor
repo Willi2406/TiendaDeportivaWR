@@ -1,0 +1,112 @@
+﻿@page "/Producto/Form"
+@page "/Producto/Edit/{ProductoId:int}"
+@using TiendaDeportivaWR.Models
+@using TiendaDeportivaWR.Services
+@inject ProductoServices productoServices
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>@(ProductoId > 0 ? "Editar Producto" : "Nuevo Producto")</PageTitle>
+
+<EditForm Model="producto" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+
+    <div class="container">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white text-center">
+                <h5 class="card-title m-0">
+                    @(ProductoId > 0 ? $"Editar Producto: {producto.Descripcion}" : "Registro de Nuevo Producto")
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+                    @* ID *@
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>ID</strong></label>
+                        <InputNumber class="form-control" @bind-Value="producto.ProductoId" disabled />
+                    </div>
+
+                    @* Descripción *@
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>Descripción</strong></label>
+                        <InputText class="form-control" @bind-Value="producto.Descripcion" placeholder="Ej: Zapatillas Nike Air" />
+                        <ValidationMessage For="() => producto.Descripcion" />
+                    </div>
+
+                    @* Costo *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Costo (Compra)</strong></label>
+                        <InputNumber class="form-control" @bind-Value="producto.Costo" />
+                        <ValidationMessage For="() => producto.Costo" />
+                        <small class="text-muted">Referencia de costo base.</small>
+                    </div>
+
+                    @* Precio *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Precio (Venta)</strong></label>
+                        <InputNumber class="form-control" @bind-Value="producto.Precio" />
+                        <ValidationMessage For="() => producto.Precio" />
+                    </div>
+
+                    @* Existencia (Read Only) *@
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Existencia Actual</strong></label>
+                        <InputNumber class="form-control" @bind-Value="producto.Existencia" disabled />
+                        <small class="text-muted">Se modifica mediante Entradas.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex justify-content-center gap-3">
+                <a href="/Producto/Index" class="btn btn-secondary">
+                    <span class="bi bi-arrow-left me-1"></span> Volver
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <span class="bi bi-floppy me-1"></span> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int ProductoId { get; set; }
+
+    public Producto producto { get; set; } = new Producto();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductoId > 0)
+        {
+            var encontrado = await productoServices.Buscar(ProductoId);
+            if (encontrado != null)
+                producto = encontrado;
+            else
+                Navigation.NavigateTo("/Producto/Form");
+        }
+    }
+
+    private async Task Guardar()
+    {
+        // Validación manual de nombre duplicado
+        if (await productoServices.ExisteDescripcion(producto.Descripcion, producto.ProductoId))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Ya existe un producto con esa descripción.");
+            return;
+        }
+
+        var paso = await productoServices.Guardar(producto);
+        if (paso)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Producto guardado correctamente.");
+            Navigation.NavigateTo("/Producto/Index");
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Error al guardar el producto.");
+        }
+    }
+}
